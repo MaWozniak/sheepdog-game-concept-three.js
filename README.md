@@ -1,6 +1,6 @@
 # sheepdog-competition-game-concept-three.js
 
-test site: 
+test site: https://htmlpreview.github.io/?https://github.com/MaWozniak/sheepdog-game-concept-three.js/blob/master/sheepdog_game.html
 
 Aim: placed all sheep in red-fences area. 
 
