@@ -6,7 +6,7 @@ Aim: placed all sheep in red-fences area.
 
 Your steering two dogs:
 
-ASWD - 1st dog
+WASD - 1st dog
 
 ARROWS (UP, DOWN, etc) - 2nd dog.
 
