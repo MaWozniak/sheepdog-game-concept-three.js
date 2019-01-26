@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Sheep game mechanics</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+
+	<body>
+		<script src="js/three.js"></script>
+		<script src="js/OrbitControls.js"></script>
+		<script src="js/WebGL.js"></script>
+		<script src="js/stats.min.js"></script>
+
+		<script>
+
+			if ( WEBGL.isWebGLAvailable() === false ) {
+
+				document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+
+			}
+
+			var container, stats, controls;
+			var camera, scene, renderer, light, spotlight;
+			var cube1, cube2;
+			var cubes = [];
+			var x = 0;
+			var y = 0;
+
+			var keyboard = {};
+			var Up1 = false, Down1=false, Right1=false, Left1=false;
+			var Up2 = false, Down2=false, Right2=false, Left2=false;
+			var speed = 1;
+
+
+			init();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 1, 50000 );
+				camera.position.set( 0, 45, 50 );
+				//camera.position.set( 30, 30, 30 );
+
+				controls = new THREE.OrbitControls( camera );
+				controls.enableKeys = false;
+				controls.target.set( 0, 0, 6 );
+				controls.update();
+
+				scene = new THREE.Scene();
+				//scene.background = new THREE.Color( 0xa0a0a0 );
+				scene.background = new THREE.Color( 0x000000 );
+				scene.fog = new THREE.Fog( 0xa0a0a0, 8000, 30000 );
+
+
+
+				light = new THREE.DirectionalLight( 0xff00ff, 0.4 );
+				light.position.set( 1, 2, 1 );
+				//light.castShadow = true;
+				//scene.add( light );
+
+				light.shadow.mapSize.width = 4000;
+				light.shadow.mapSize.height = 4000;
+
+				pointLight = new THREE.PointLight( 0xffffff, 1.25, 5000 );
+				pointLight.position.set( 5, 15, 5 );
+				pointLight.castShadow = true;
+				pointLight.shadow.camera.near = 0.01;
+				pointLight.shadow.camera.far = 5000;
+				scene.add( pointLight );
+
+
+
+				// ground
+				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 80, 80 ), new THREE.MeshPhongMaterial( { color: 0x464646, depthWrite: false } ) );
+				mesh.rotation.x = - Math.PI / 2;
+				mesh.receiveShadow = true;
+				scene.add( mesh );
+
+				var grid = new THREE.GridHelper( 20, 20, 0x000000, 0x000000 );
+				grid.material.opacity = 0.2;
+				grid.material.transparent = true;
+				scene.add( grid );
+
+
+
+				//cubes-predators
+				var geometry = new THREE.BoxBufferGeometry( 0.5, 0.5, 0.5 );
+				var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+				cube1 = new THREE.Mesh( geometry, material );
+				cube1.position.set(-20,0.5,20);
+				cube1.castShadow = true;
+				scene.add( cube1 );
+
+				material = new THREE.MeshBasicMaterial( { color: 0x00ffff } );
+				cube2 = new THREE.Mesh( geometry, material );
+				cube2.position.set(20,0.5,20);
+				cube2.castShadow = true;
+				scene.add( cube2 );
+
+
+				//sheeps
+				material = new THREE.MeshPhongMaterial( { color: 0xffffff } );
+				for(var i=0; i<200; i++){
+					cubes[i] = new THREE.Mesh( geometry, material );
+					cubes[i].position.x = (Math.random()-0.5)*40;
+					cubes[i].position.z = (Math.random()-0.5)*40;
+					cubes[i].position.y = 0.5;
+					cubes[i].castShadow = true;
+					scene.add( cubes[i] );
+				}
+				material = new THREE.MeshPhongMaterial( { color: 0xcc00cc } );
+				for(var i=200; i<250; i++){
+					cubes[i] = new THREE.Mesh( geometry, material );
+					cubes[i].position.x = (Math.random()-0.5)*40;
+					cubes[i].position.z = (Math.random()-0.5)*40;
+					cubes[i].position.y = 0.5;
+					cubes[i].castShadow = true;
+					scene.add( cubes[i] );
+				}
+
+
+				//borders
+				geometry = new THREE.BoxBufferGeometry( 50, 0.5, 0.5 );
+				material = new THREE.MeshBasicMaterial( { color: 0x232323 } );
+				border1 = new THREE.Mesh( geometry, material );
+				border1.position.set(0,0,25.25);
+				border1.castShadow = true;
+				scene.add( border1 );
+
+				border2 = border1.clone();
+				border2.position.set(0,0,-25.25);
+				border2.castShadow = true;
+				scene.add( border2 );
+
+				border3 = border1.clone();
+				border3.position.set(25.25,0,0);
+				border3.rotation.y = Math.PI/2;
+				border3.castShadow = true;
+				scene.add( border3 );
+
+				border4 = border1.clone();
+				border4.position.set(-25.25,0,0);
+				border4.rotation.y = Math.PI/2;
+				border4.castShadow = true;
+				scene.add( border4 );
+
+				//fence
+				geometry = new THREE.BoxBufferGeometry( 13, 0.55, 0.25 );
+				material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+				fence1 = new THREE.Mesh( geometry, material );
+				fence1.position.set(-8,0.25,12);
+				fence1.castShadow = true;
+				scene.add( fence1 );
+
+				fence2 = fence1.clone();
+				fence2.position.set(8,0.25,12);
+				fence2.castShadow = true;
+				scene.add( fence2 );
+
+				fence3 = fence1.clone();
+				fence3.position.set(-14.5,0.25,18.5);
+				fence3.rotation.y = Math.PI/2;
+				fence3.castShadow = true;
+				scene.add( fence3 );
+
+				fence4 = fence1.clone();
+				fence4.position.set(14.5,0.25,18.5);
+				fence4.rotation.y = Math.PI/2;
+				fence4.castShadow = true;
+				scene.add( fence4 );
+
+
+
+
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.BasicShadowMap;
+				container.appendChild( renderer.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				// stats
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				animate();
+
+
+			}
+
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animateCubesArray(){
+
+				for(var i=0; i<cubes.length; i++){
+
+					//basic animation
+					//cubes[i].position.x += (Math.random()-0.5)/600;
+					//cubes[i].position.z += (Math.random()-0.5)/600;
+
+					y += 0.2;
+					cubes[i].position.y += Math.sin(y)/40;
+
+					//borders
+					if(cubes[i].position.x < -25) {cubes[i].position.x = -24.5}
+					if(cubes[i].position.x > 25) {cubes[i].position.x = 24.5}
+					if(cubes[i].position.z < -25) {cubes[i].position.z = -24.5}
+					if(cubes[i].position.z > 25) {cubes[i].position.z = 24.5}
+
+					//fence-borders
+					//if((cubes[i].position.z > 11.55) && (cubes[i].position.z < 12.25) && (cubes[i].position.x > -14.5) && (cubes[i].position.x < 14.5)) {cubes[i].position.z = 11.5}
+					if((cubes[i].position.z > 11.45) && (cubes[i].position.z < 12) &&
+					 ((cubes[i].position.x > -14.5) && (cubes[i].position.x < -1.5) || (cubes[i].position.x > 1.5) && (cubes[i].position.x < 14.5))) {cubes[i].position.z -= 0.5} //=10.9
+					if((cubes[i].position.z > 12.01) && (cubes[i].position.z < 12.55) &&
+ 					 ((cubes[i].position.x > -14.5) && (cubes[i].position.x < -1.5) || (cubes[i].position.x > 1.5) && (cubes[i].position.x < 14.5))) {cubes[i].position.z += 0.5} //=13.1
+
+					if((cubes[i].position.z > 11.45) && (cubes[i].position.z < 25) && (cubes[i].position.x < -14.0) && (cubes[i].position.x > -14.5))
+					 {cubes[i].position.x += 0.5}
+					if((cubes[i].position.z > 11.45) && (cubes[i].position.z < 25) && (cubes[i].position.x < -14.5) && (cubes[i].position.x > -15.0))
+ 					 {cubes[i].position.x -= 0.5}
+					if((cubes[i].position.z > 11.45) && (cubes[i].position.z < 25) && (cubes[i].position.x < 15.0) && (cubes[i].position.x > 14.5))
+ 					 {cubes[i].position.x -= 0.5}
+					if((cubes[i].position.z > 11.45) && (cubes[i].position.z < 25) && (cubes[i].position.x < 14.5) && (cubes[i].position.x > 14.0))
+  					 {cubes[i].position.x += 0.5}
+
+
+					//preadators
+
+					predatorsInteraction(cube1, i);
+
+					predatorsInteraction(cube2, i);
+
+				}
+
+				//self-interactions
+				for(var i=0; i<cubes.length; i++){
+					for(var j=0; j<cubes.length; j++){
+						if((i != j) && ( distance( cubes[i], cubes[j] ) < 0.75)){
+
+							cubes[i].position.x += (cubes[i].position.x - cubes[j].position.x)/3;
+							cubes[i].position.z += (cubes[i].position.z - cubes[j].position.z)/3;
+						}
+
+						// if((i != j) && ( distance( cubes[i], cubes[j] ) < 0.2)){
+						//
+						// 	cubes[i].position.x += (cubes[i].position.x - cubes[j].position.x);
+						// 	cubes[i].position.z += (cubes[i].position.z - cubes[j].position.z);
+						// }
+
+						if((i != j) && ( distance( cubes[i], cubes[j] ) > 41)){
+
+							cubes[i].position.x -= (cubes[i].position.x - cubes[j].position.x)/3000000;
+							cubes[i].position.z -= (cubes[i].position.z - cubes[j].position.z)/3000000;
+						}
+						if((i != j) && ( distance( cubes[i], cubes[j] ) > 7) && ( distance( cubes[i], cubes[j] ) < 13)){
+
+							cubes[i].position.x -= (cubes[i].position.x - cubes[j].position.x)/30000;
+							cubes[i].position.z -= (cubes[i].position.z - cubes[j].position.z)/30000;
+						}
+					}
+				}
+			}
+
+			function predatorsInteraction( predator, i ) {
+
+				if( distance( cubes[i], predator ) < 4.5){
+
+					cubes[i].position.x += (cubes[i].position.x - predator.position.x)/30;
+					cubes[i].position.z += (cubes[i].position.z - predator.position.z)/30;
+				}
+
+				if( distance( cubes[i], predator ) < 1.5){
+
+					cubes[i].position.x += (cubes[i].position.x - predator.position.x)/9;
+					cubes[i].position.z += (cubes[i].position.z - predator.position.z)/9;
+				}
+
+				if( distance( cubes[i], predator ) < 16.5){
+
+					cubes[i].position.x += (cubes[i].position.x - predator.position.x)/300;
+					cubes[i].position.z += (cubes[i].position.z - predator.position.z)/300;
+				}
+
+				// if((Math.abs(cubes[i].position.x - predator.position.x) < 26.5) && (Math.abs(cubes[i].position.z - predator.position.z) < 26.5)){
+				//
+				// 	cubes[i].position.x += (cubes[i].position.x - predator.position.x)/3000;
+				// 	cubes[i].position.z += (cubes[i].position.z - predator.position.z)/3000;
+				// }
+
+			}
+
+			function keyDown(event){
+				keyboard[event.keyCode] = true;
+			}
+
+			function keyUp(event){
+				keyboard[event.keyCode] = false;
+			}
+
+			window.addEventListener('keydown', keyDown);
+			window.addEventListener('keyup', keyUp);
+
+			function keyboardControl() {
+
+				speed = 0.18;
+
+				//cube1
+				if(keyboard[87]){ // W key
+					Up1 = true;
+				}
+				if(keyboard[83]){ // S key
+					Down1 = true;
+				}
+				if(keyboard[65]){ // A key
+					Left1 = true;
+				}
+				if(keyboard[68]){ // D key
+					Right1 = true;
+				}
+
+				if(Up1){
+					cube1.position.z -= speed;
+				}
+				if(Down1){
+					cube1.position.z += speed;
+				}
+				if(Right1){
+					cube1.position.x += speed;
+				}
+				if(Left1){
+					cube1.position.x -= speed;
+				}
+
+				Up1=false; Down1=false; Right1=false; Left1=false;
+
+				//cube2
+				if(keyboard[38]){ // arrow UP key
+					Up2 = true;
+				}
+				if(keyboard[40]){ // arrow Down key
+					Down2 = true;
+				}
+				if(keyboard[37]){ // arrow Left key
+					Left2 = true;
+				}
+				if(keyboard[39]){ // arrow Right key
+					Right2 = true;
+				}
+
+				if(Up2){
+					cube2.position.z -= speed;
+				}
+				if(Down2){
+					cube2.position.z += speed;
+				}
+				if(Right2){
+					cube2.position.x += speed;
+				}
+				if(Left2){
+					cube2.position.x -= speed;
+				}
+
+				Up2=false; Down2=false; Right2=false; Left2=false;
+
+			}
+
+			function predatorsAI( predator ) {
+				var px =0;
+				var pz =0;
+				for(var i=0; i<cubes.length; i++){
+					px = px + cubes[i].position.x/cubes.length;
+					pz = pz + cubes[i].position.z/cubes.length;
+				}
+
+				predator.position.x -= (predator.position.x - px)/200;
+				predator.position.z -= (predator.position.z - pz)/200;
+
+			}
+
+			function distance( A, B){
+				return Math.pow(Math.pow((A.position.x - B.position.x),2) + Math.pow((A.position.z - B.position.z),2),0.5)
+			}
+
+
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				//animation
+
+				x += 0.2;
+				cube1.rotation.y +=0.01;
+				cube1.position.y += Math.sin(x)/30;
+
+				cube2.rotation.y +=0.01;
+				cube2.position.y += Math.sin(x)/30;
+
+
+				keyboardControl();
+
+				animateCubesArray();
+
+				//predatorsAI(cube1);
+				//predatorsAI(cube2);
+
+				//animation
+
+				renderer.render( scene, camera );
+
+				stats.update();
+			}
+
+
+
+		</script>
+
+	</body>
+</html>
